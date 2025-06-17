@@ -26,11 +26,24 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
+const allowedOrigin =
+  process.env.NODE_ENV === "production"
+    ? "https://your-frontend.vercel.app"
+    : "http://localhost:3000";
+
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+  })
+);
+
 app.use("/webhook", webhookRoutes);
 
 //middlewares
 app.use(express.json());
-app.use(cors());
+
+// app.use(cors());
 
 //testing
 // app.get("/", async (req, res) => {
