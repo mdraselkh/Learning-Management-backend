@@ -26,17 +26,24 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-const allowedOrigin =
-  process.env.NODE_ENV === "production"
-    ? "https://your-frontend.vercel.app"
-    : "http://localhost:3000";
+const allowedOrigins = [
+  "https://your-frontend.vercel.app", // production frontend
+  "http://localhost:3000", // local dev frontend
+];
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
 
 app.use("/webhook", webhookRoutes);
 
