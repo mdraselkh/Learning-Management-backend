@@ -67,3 +67,81 @@ export const getRevenueByCategoryModel = async (filter) => {
     throw error;
   }
 };
+
+
+export const getInstructorDashboardStatsModel = async (InstructorId) => {
+  console.log(InstructorId);
+  try {
+    // 1️⃣ Total Earnings (sum of completed payments for instructor's courses)
+    const revenueRes = await pool.query(
+      `
+      SELECT COALESCE(SUM(p.amount), 0) AS total
+      FROM payments p
+      JOIN courses c ON p.course_id = c.id
+      JOIN course_instructors ci ON c.id = ci.course_id
+      WHERE p.status = 'completed' AND ci.instructor_id = $1
+      `,
+      [InstructorId]
+    );
+
+    // 2️⃣ Total Courses by Instructor
+    const coursesRes = await pool.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM course_instructors
+      WHERE instructor_id = $1
+      `,
+      [InstructorId]
+    );
+
+    // 3️⃣ Total Unique Students enrolled in Instructor’s courses
+    const studentsRes = await pool.query(
+      `
+      SELECT COUNT(DISTINCT e.user_id) AS total
+      FROM enrollments e
+      JOIN courses c ON e.course_id = c.id
+      JOIN course_instructors ci ON c.id = ci.course_id
+      WHERE ci.instructor_id = $1
+      `,
+      [InstructorId]
+    );
+
+    // 4️⃣ Average Rating from reviews
+    const ratingRes = await pool.query(
+      `
+      SELECT COALESCE(AVG(r.rating), 0) AS avg
+      FROM reviews r
+      JOIN courses c ON r.course_id = c.id
+      JOIN course_instructors ci ON c.id = ci.course_id
+      WHERE ci.instructor_id = $1
+      `,
+      [InstructorId]
+    );
+
+    // 5️⃣ Total Lessons (sections) from instructor’s courses
+    const lessonsRes = await pool.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM sections s
+      WHERE s.course_id IN (
+        SELECT ci.course_id
+        FROM course_instructors ci
+        WHERE ci.instructor_id = $1
+      )
+      `,
+      [InstructorId]
+    );
+
+    return {
+      totalEarnings: parseFloat(revenueRes.rows[0].total),
+      totalCourses: parseInt(coursesRes.rows[0].total),
+      totalStudents: parseInt(studentsRes.rows[0].total),
+      avgRating: parseFloat(ratingRes.rows[0].avg).toFixed(1),
+      totalLessons: parseInt(lessonsRes.rows[0].total),
+    };
+  } catch (err) {
+    console.error("Dashboard Stats Error:", err);
+    throw err;
+  }
+};
+
