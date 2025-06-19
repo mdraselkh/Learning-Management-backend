@@ -28,7 +28,7 @@ const port = process.env.PORT || 5000;
 
 const allowedOrigins = [
   "https://learning-management-frontend.vercel.app", // production frontend
-  "http://localhost:3000", // local dev frontend
+  // "http://localhost:3000", 
 ];
 
 app.use(
