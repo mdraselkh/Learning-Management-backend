@@ -20,6 +20,7 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false, // required by Neon
   },
+
 });
 
 export default pool;
