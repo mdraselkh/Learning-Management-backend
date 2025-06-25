@@ -20,9 +20,7 @@ import createBlogsTable from "./data/blogsTable.js";
 import createTables from "./data/courseTable.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
-import oauthRoutes from "./routes/oauthRoutes.js";
-import passport from "passport";
-import "./config/passport.js";
+
 
 dotenv.config();
 
