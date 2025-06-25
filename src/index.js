@@ -52,11 +52,11 @@ app.use("/webhook", webhookRoutes);
 //middlewares
 app.use(express.json());
 
-app.use(passport.initialize());
+// app.use(passport.initialize());
 // app.use(passport.session());
 
 // Plug your Google routes 🔌
-app.use("/api/auth", oauthRoutes);
+// app.use("/api/auth", oauthRoutes);
 
 //routes
 app.use("/api/users", userRoutes);
