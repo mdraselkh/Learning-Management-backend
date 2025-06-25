@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 // Function to register a new user
 const createUser = async (data) => {
@@ -12,11 +13,12 @@ const createUser = async (data) => {
       throw new Error("Password is required");
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
     // console.log('Hashed Password:', hashedPassword);
 
     const query = `
-    INSERT INTO users (name, email, password, phone, description, city, address, role, image_url)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    INSERT INTO users (name, email, password, phone, description, city, address, role, image_url,email_verification_token)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *;
   `;
 
@@ -30,6 +32,7 @@ const createUser = async (data) => {
       address,
       role,
       image_url,
+      verificationToken
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -51,6 +54,19 @@ const findUserByEmail = async (email) => {
     console.error("Error finding user by email:", error);
     throw error; // Throw the error to handle it in the calling function
   }
+};
+
+export const verifyEmailToken = async (userId, token) => {
+  const userResult = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
+  const user = userResult.rows[0];
+  if (!user || user.email_verification_token !== token) return null;
+
+  await pool.query(
+    "UPDATE users SET is_email_verified = true, email_verification_token = NULL WHERE id = $1",
+    [userId]
+  );
+
+  return true;
 };
 
 const getAllUsers = async () => {

@@ -13,6 +13,8 @@ const createUserTable = async () => {
         description TEXT,
         image_url VARCHAR(255),
         role VARCHAR(50) DEFAULT 'student',
+        is_email_verified BOOLEAN DEFAULT false,
+        email_verification_token TEXT,
         status VARCHAR(255) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'blocked')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
