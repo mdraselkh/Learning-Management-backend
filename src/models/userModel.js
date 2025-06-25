@@ -42,6 +42,20 @@ const createUser = async (data) => {
   }
 };
 
+export const findOrCreateUser = async ({ name, email, image_url, provider }) => {
+  const existingUser = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+
+  if (existingUser.rows.length > 0) return existingUser.rows[0];
+
+  const newUser = await pool.query(
+    `INSERT INTO users (name, email, image_url, role, is_email_verified, status)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [name, email, image_url, "student", true, "active"]
+  );
+
+  return newUser.rows[0];
+};
+
 // Function to find a user by email
 const findUserByEmail = async (email) => {
   try {

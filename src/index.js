@@ -20,6 +20,9 @@ import createBlogsTable from "./data/blogsTable.js";
 import createTables from "./data/courseTable.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import oauthRoutes from "./routes/oauthRoutes.js";
+import passport from "passport";
+import "./config/passport.js";
 
 dotenv.config();
 
@@ -27,8 +30,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 const allowedOrigins = [
-  "https://learning-management-frontend.vercel.app", 
-  // "http://localhost:3000", 
+  "https://learning-management-frontend.vercel.app",
+  // "http://localhost:3000",
 ];
 
 app.use(
@@ -44,12 +47,16 @@ app.use(
   })
 );
 
-
 app.use("/webhook", webhookRoutes);
 
 //middlewares
 app.use(express.json());
 
+app.use(passport.initialize());
+// app.use(passport.session());
+
+// Plug your Google routes 🔌
+app.use("/api/auth", oauthRoutes);
 
 //routes
 app.use("/api/users", userRoutes);
@@ -62,7 +69,6 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/review", reviewRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-
 
 const initTables = async () => {
   try {
