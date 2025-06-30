@@ -19,6 +19,8 @@ import {
 } from "../middlewares/validation/userSchema.js";
 import { z } from "zod";
 import sendEmail from "../utils/sendEmail.js";
+import pool from "../config/db.js";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Registers a new user.
@@ -58,7 +60,7 @@ export const registerUser = async (req, res) => {
     const user = await createUser(data);
     // const verifyUrl = `http://localhost:3000/verify-email?token=${user.email_verification_token}&userId=${user.id}`;
     const verifyUrl = `https://learning-management-frontend.vercel.app/verify-email?token=${user.email_verification_token}&userId=${user.id}`;
-   
+
     const emailHTML = `
   <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px; background-color: #ffffff;">
     <h2 style="text-align: center; color: #2c3e50;">Welcome to <span style="color: #f59e0b;">LearnCraft LMS</span> 🎓</h2>
@@ -90,7 +92,6 @@ export const registerUser = async (req, res) => {
     res.status(201).json({
       message: "Signup successful! Please check your email to verify.",
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -158,10 +159,13 @@ export const loginUser = async (req, res) => {
 
     await markUserAsActive(user.id);
 
+    const sessionId = uuidv4();
+
     // Generate a token for the logged-in user
     const token = jwt.sign(
       {
         userId: user.id,
+        sessionId: sessionId,
         role: user.role,
         name: user.name,
         email: user.email,
@@ -173,6 +177,11 @@ export const loginUser = async (req, res) => {
       config.jwtSecret,
       { expiresIn: "1d" }
     );
+
+    await pool.query("UPDATE users SET session_token = $1 WHERE id = $2", [
+      sessionId,
+      user.id,
+    ]);
 
     res.status(200).json({
       message: "Login successful",
@@ -216,6 +225,51 @@ export const getUserByIdHandler = async (req, res) => {
   }
 };
 
+// export const getProfileHandler = async (req, res) => {
+//   try {
+//     const authHeader = req.headers.authorization;
+//     if (!authHeader) {
+//       return res.status(401).json({ message: "No token provided" });
+//     }
+
+//     const token = authHeader.split(" ")[1];
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     console.log(decoded);
+//     const id = decoded.userId;
+//     console.log(id);
+
+//     const user = await getUserById(id);
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     const safeUser = {
+//       userId: user.id,
+//       name: user.name,
+//       email: user.email,
+//       phone: user.phone,
+//       role: user.role,
+//       status: user.status,
+//       address: user.address,
+//       city: user.city,
+//       image_url: user.image_url,
+//       description: user.description,
+//     };
+
+//     res.status(200).json({
+//       message: `User ${id} fetched successfully`,
+//       user: safeUser,
+//     });
+//   } catch (error) {
+//     if (error.name === "TokenExpiredError") {
+//       return res.status(401).json({ message: "Token expired" });
+//     }
+//     console.error("getProfileHandler error:", error);
+//     res.status(500).json({ message: "Error fetching user" });
+//   }
+// };
+
 export const getProfileHandler = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -224,18 +278,37 @@ export const getProfileHandler = async (req, res) => {
     }
 
     const token = authHeader.split(" ")[1];
+
+    // Decode token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(decoded);
-    const id = decoded.userId;
-    console.log(id);
+    // const id = decoded.userId;
+    const { userId, sessionId } = decoded;
 
+    // 1️⃣ Get session_token from DB
+    const result = await pool.query(
+      "SELECT session_token FROM users WHERE id = $1",
+      [userId]
+    );
 
-    const user = await getUserById(id);
+    const dbSessionToken = result.rows[0]?.session_token;
 
+    console.log(dbSessionToken);
+
+    // 2️⃣ Check if token matches DB session_token
+    if (sessionId !== dbSessionToken) {
+      return res.status(403).json({
+        message:
+          "Session invalid or expired. You may have logged in elsewhere.",
+      });
+    }
+
+    // 3️⃣ Fetch the user data
+    const user = await getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // 4️⃣ Return safe user
     const safeUser = {
       userId: user.id,
       name: user.name,
@@ -250,8 +323,8 @@ export const getProfileHandler = async (req, res) => {
     };
 
     res.status(200).json({
-      message: `User ${id} fetched successfully`,
-      user:safeUser,
+      message: `User ${userId} fetched successfully`,
+      user: safeUser,
     });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
@@ -283,7 +356,6 @@ export const updateUserHandler = async (req, res) => {
     // Update the user
     const user = await updateUser(id, data);
 
-
     const safeUser = {
       userId: user.id,
       name: user.name,
@@ -298,9 +370,10 @@ export const updateUserHandler = async (req, res) => {
     };
 
     // Send response
-    res
-      .status(200)
-      .json({ message: `User ${req.params.id} updated successfully`, safeUser });
+    res.status(200).json({
+      message: `User ${req.params.id} updated successfully`,
+      safeUser,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({

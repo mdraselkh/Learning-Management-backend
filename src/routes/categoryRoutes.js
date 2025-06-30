@@ -10,11 +10,12 @@ import {
   handleDeleteCategoryById,
   handleGetCategoriesWithCourseCount
 } from '../controllers/categoryController.js';
+import { verifyTokenWithSession } from '../middlewares/verifyTokenWithSession.js';
 
 const router = express.Router();
 
 // Route to create a new category (parent or subcategory)
-router.post('/createCategories', handleCreateCategory);
+router.post('/createCategories',verifyTokenWithSession, handleCreateCategory);
 
 // Route to get all categories and subcategories
 router.get('/getAllCategories', handleGetCategories);
@@ -27,9 +28,9 @@ router.get('/getCategory/:id', handleGetCategoryById);
 router.get('/subcategories/:categoryTitle', handleGetSubcategoriesByCategory);
 
 // Route to update a category or subcategory by ID
-router.put('/updateCategory/:id', handleUpdateCategoryById);
+router.put('/updateCategory/:id',verifyTokenWithSession, handleUpdateCategoryById);
 
 // Route to delete a category by ID
-router.delete('/deleteCategory/:id', handleDeleteCategoryById);
+router.delete('/deleteCategory/:id',verifyTokenWithSession, handleDeleteCategoryById);
 
 export default router;

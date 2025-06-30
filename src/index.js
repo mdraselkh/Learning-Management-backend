@@ -56,6 +56,13 @@ app.use(express.json());
 // Plug your Google routes 🔌
 // app.use("/api/auth", oauthRoutes);
 
+app.set('trust proxy', true); // Important if deploying on Vercel, Render, etc.
+
+app.get("/api/user-ip", (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+  res.json({ ip });
+});
+
 //routes
 app.use("/api/users", userRoutes);
 app.use("/api/instructors", instructorRoutes);

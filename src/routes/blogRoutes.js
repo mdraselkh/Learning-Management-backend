@@ -7,12 +7,13 @@ import {
   handleDeleteBlog
 } from "../controllers/blogController.js";
 import { blogsUpload } from "../config/multer.js";
+import { verifyTokenWithSession } from "../middlewares/verifyTokenWithSession.js";
 
 
 const router = express.Router();
 
 // Create a new blog
-router.post("/addblog", blogsUpload.single("image_url"), handleCreateBlog);
+router.post("/addblog",verifyTokenWithSession, blogsUpload.single("image_url"), handleCreateBlog);
 
 // Get all blogs
 router.get("/getAllBlogs", handleGetAllBlogs);
@@ -21,9 +22,9 @@ router.get("/getAllBlogs", handleGetAllBlogs);
 router.get("/getBlog/:id", handleGetBlogById);
 
 // Update a blog by ID
-router.patch("/updateBlog/:id", blogsUpload.single("image_url"), handleUpdateBlog);
+router.patch("/updateBlog/:id",verifyTokenWithSession, blogsUpload.single("image_url"), handleUpdateBlog);
 
 // Delete a blog by ID
-router.delete("/deleteBlog/:id", handleDeleteBlog);
+router.delete("/deleteBlog/:id",verifyTokenWithSession, handleDeleteBlog);
 
 export default router;
